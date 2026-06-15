@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import io
 
-st.set_page_config(page_title="2026 World Cup Predictor", page_icon="🏆", layout="centered")
+st.set_page_config(page_title="2026 World Cup Predictor", page_icon="🏆", layout="wide")
 
 # --- 1. REAL-WORLD MATCH LEDGER ---
 REAL_WORLD_RESULTS = [
