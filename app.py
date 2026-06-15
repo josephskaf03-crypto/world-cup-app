@@ -5,7 +5,15 @@ import io
 
 st.set_page_config(page_title="2026 World Cup Predictor", page_icon="🏆", layout="centered")
 
-# 1. Complete, Revised Official 48-Team Dataset
+# --- 1. REAL-WORLD MATCH LEDGER ---
+# The AI reads this database first. When you add real results here, 
+# it recalculates team strengths BEFORE estimating future matches.
+REAL_WORLD_RESULTS = [
+    {"home_team": "Netherlands", "away_team": "Japan", "home_score": 2, "away_score": 2, "status": "FT"},
+    {"home_team": "Germany", "away_team": "Curaçao", "home_score": 7, "away_score": 1, "status": "FT"}
+]
+
+# Baseline Dataset
 csv_data = """team_name,elo_rating,form_index,play_style,group_assignment
 Mexico,1820,72,balanced,Group A
 South Africa,1610,65,defensive_counter,Group A
@@ -57,14 +65,36 @@ Ghana,1700,66,wing_attack,Group L
 Panama,1695,65,defensive_counter,Group L"""
 
 @st.cache_data
-def load_data():
+def load_base_data():
     return pd.read_csv(io.StringIO(csv_data))
 
-teams_df = load_data()
+teams_df = load_base_data()
 elo_lookup = pd.Series(teams_df.elo_rating.values, index=teams_df.team_name).to_dict()
+
+# --- 2. THE AI LEARNING ENGINE (DYNAMIC RE-RATING) ---
+# This processes the ledger. Because Japan drew with a higher-rated opponent, 
+# it naturally boosts Japan's rating and dampens the Netherlands' rating.
+K_FACTOR = 40
+for match in REAL_WORLD_RESULTS:
+    t1, t2 = match["home_team"], match["away_team"]
+    s1, s2 = match["home_score"], match["away_score"]
+    
+    if t1 in elo_lookup and t2 in elo_lookup:
+        elo1, elo2 = elo_lookup[t1], elo_lookup[t2]
+        expected_1 = 1 / (1 + 10 ** (-(elo1 - elo2) / 400))
+        
+        # Determine actual outcome weights
+        if s1 > s2: actual_1 = 1.0
+        elif s1 < s2: actual_1 = 0.0
+        else: actual_1 = 0.5
+        
+        # Re-allocate rating units based on performance shift
+        shift = K_FACTOR * (actual_1 - expected_1)
+        elo_lookup[t1] += shift
+        elo_lookup[t2] -= shift
+
 groups = teams_df.groupby('group_assignment')['team_name'].apply(list).to_dict()
 
-# 2. Match Probability Mathematics
 def calculate_probabilities(t1, t2):
     elo_1, elo_2 = elo_lookup.get(t1, 1500), elo_lookup.get(t2, 1500)
     win_prob = 1 / (1 + 10 ** (-(elo_1 - elo_2) / 400))
@@ -87,18 +117,14 @@ def play_knockout(t1, t2):
     elif pts2 == 3: return t2
     else: return t1 if np.random.rand() > 0.5 else t2
 
-# 3. Interface Navigation Tabs
+# 3. App User Interface Layout
 tab1, tab2 = st.tabs(["🔮 Smart Match Predictor", "🏆 Full Tournament Forecaster"])
 
-# --- TAB 1: SMART MATCH PREDICTOR ---
 with tab1:
     st.header("⚽ Group Stage Match Estimator")
-    st.write("Select a specific tournament group to filter the selection pool dynamically.")
+    st.success("🤖 AI Brain Status: Live Learning Active. Team strengths have adjusted using yesterday's real scores!")
     
-    # Smart Filtering Step 1: User chooses the Group
-    selected_group = st.selectbox("Select Tournament Group", sorted(list(groups.keys())))
-    
-    # Smart Filtering Step 2: Extract only the 4 teams inside that specific group
+    selected_group = st.selectbox("Select Tournament Group", sorted(list(groups.keys())), index=5) # Defaults to Group F
     filtered_teams = groups[selected_group]
     
     col1, col2 = st.columns(2)
@@ -113,22 +139,21 @@ with tab1:
         t1_w, tie_p, t2_w = calculate_probabilities(team_a, team_b)
         
         st.write("---")
-        st.subheader(f"📊 {selected_group} Win Probabilities")
+        st.subheader(f"📊 Updated Probability Matrix")
         
-        st.write(f"**{team_a}** Win Chance: `{t1_w:.1f}%`")
+        st.write(f"**{team_a}** Expected Win Probability: `{t1_w:.1f}%`")
         st.progress(int(t1_w))
         
-        st.write(f"**Draw / Tie** Chance: `{tie_p:.1f}%`")
+        st.write(f"**Draw / Tie** Expected Probability: `{tie_p:.1f}%`")
         st.progress(int(tie_p))
         
-        st.write(f"**{team_b}** Win Chance: `{t2_w:.1f}%`")
+        st.write(f"**{team_b}** Expected Win Probability: `{t2_w:.1f}%`")
         st.progress(int(t2_w))
         st.write("---")
 
-# --- TAB 2: TOURNAMENT FORECASTER ---
 with tab2:
     st.header("🏆 Tournament Simulation Engine")
-    st.write("Process 1,000 randomized tournament brackets using official group assignments.")
+    st.write("Process 1,000 randomized tournament brackets factored by adjusted live results.")
     
     if st.button("🚀 Run Live Bracket Simulations", type="primary"):
         with st.spinner("Processing brackets..."):
