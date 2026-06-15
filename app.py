@@ -11,7 +11,7 @@ st.write("Click the button below to run 1,000 Monte Carlo simulations using real
 # Load backend data metrics safely
 @st.cache_data
 def load_data():
-    return pd.read_csv("data/team_stats.csv")
+    return pd.read_csv("team_stats.csv")
 
 teams_df = load_data()
 elo_lookup = pd.Series(teams_df.elo_rating.values, index=teams_df.team_name).to_dict()
