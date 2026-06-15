@@ -56,10 +56,10 @@ Jordan,1625,61,defensive_counter,Group J
 Portugal,1990,83,attacking_fluid,Group K
 Uzbekistan,1705,67,balanced,Group K
 Colombia,1895,275,pressing,Group K
-Congo DR,1645,63,physical,Group K
+Congo DR,1645,55,physical,Group K
 England,2015,1200,balanced,Group L
 Croatia,1885,75,possession,Group L
-Ghana,1700,66,wing_attack,Group L
+Ghana,1700,120,wing_attack,Group L
 Panama,1695,45,defensive_counter,Group L"""
 
 @st.cache_data(ttl=1)
@@ -68,4 +68,135 @@ def load_base_data():
 
 teams_df = load_base_data()
 elo_lookup = pd.Series(teams_df.elo_rating.values, index=teams_df.team_name).to_dict()
-value_lookup = pd.Series(teams_df.squad_value_m.values, index=teams_df.team_name).to_dict
+value_lookup = pd.Series(teams_df.squad_value_m.values, index=teams_df.team_name).to_dict()  # FIXED HERE
+style_lookup = pd.Series(teams_df.play_style.values, index=teams_df.team_name).to_dict()
+
+# --- 3. DYNAMIC RE-RATING SYSTEM ---
+K_FACTOR = 40
+for match in REAL_WORLD_RESULTS:
+    t1, t2 = match["home_team"], match["away_team"]
+    s1, s2 = match["home_score"], match["away_score"]
+    if t1 in elo_lookup and t2 in elo_lookup:
+        elo1, elo2 = elo_lookup[t1], elo_lookup[t2]
+        expected_1 = 1 / (1 + 10 ** (-(elo1 - elo2) / 400))
+        actual_1 = 1.0 if s1 > s2 else (0.0 if s1 < s2 else 0.5)
+        shift = K_FACTOR * (actual_1 - expected_1)
+        elo_lookup[t1] += shift
+        elo_lookup[t2] -= shift
+
+groups = teams_df.groupby('group_assignment')['team_name'].apply(list).to_dict()
+
+# --- 4. ADVANCED MATH ENGINE ---
+def calculate_advanced_matchup(t1, t2, ref_strictness, t1_injury_impact, t2_injury_impact):
+    base_elo1 = elo_lookup.get(t1, 1500)
+    base_elo2 = elo_lookup.get(t2, 1500)
+    
+    val1 = value_lookup.get(t1, 50)
+    val2 = value_lookup.get(t2, 50)
+    value_advantage = (np.log10(val1) - np.log10(val2)) * 35
+    
+    elo1_effective = (base_elo1 + value_advantage) * (1 - (t1_injury_impact / 100))
+    elo2_effective = (base_elo2 - value_advantage) * (1 - (t2_injury_impact / 100))
+    
+    style1, style2 = style_lookup.get(t1, 'balanced'), style_lookup.get(t2, 'balanced')
+    tactical_bonus = 0
+    if style1 == 'pressing' and style2 == 'possession': tactical_bonus += 25
+    if style1 == 'defensive_counter' and style2 == 'attacking_fluid': tactical_bonus += 20
+    if style1 == 'wing_attack' and style2 == 'physical': tactical_bonus += 15
+    elo1_effective += tactical_bonus
+
+    if ref_strictness == "Strict / Card Heavy":
+        if style1 == 'physical': elo1_effective -= 30
+        if style2 == 'physical': elo2_effective -= 30
+        if style1 == 'possession': elo1_effective += 15
+        if style2 == 'possession': elo2_effective += 15
+
+    win_prob = 1 / (1 + 10 ** (-(elo1_effective - elo2_effective) / 400))
+    t1_win = win_prob * 0.76
+    t2_win = (1 - win_prob) * 0.76
+    tie = 1.0 - t1_win - t2_win
+    return t1_win * 100, tie * 100, t2_win * 100
+
+# --- 5. INTERFACE LAYOUT ---
+tab1, tab2 = st.tabs(["🔮 Multi-Feature Predictor", "🏆 High-Accuracy Forecaster"])
+
+with tab1:
+    st.header("⚽ Deep-Feature Match Analyzer")
+    
+    selected_group = st.selectbox("Select Group Context", sorted(list(groups.keys())), index=5)
+    filtered_teams = groups[selected_group]
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        team_a = st.selectbox("Team 1", filtered_teams, index=0)
+        t1_inj = st.slider(f"🚨 {team_a} Injury Impact Level", 0, 30, 0)
+    with col2:
+        team_b = st.selectbox("Team 2", filtered_teams, index=1)
+        t2_inj = st.slider(f"🚨 {team_b} Injury Impact Level", 0, 30, 0)
+        
+    st.write("---")
+    st.subheader("🏁 Match Official & Pitch Variables")
+    ref_profile = st.radio("Assigned Referee Profile", ["Standard / Balanced", "Strict / Card Heavy", "Lenient / Fluid Play"], horizontal=True)
+
+    if team_a == team_b:
+        st.warning("Please choose two separate competitors.")
+    else:
+        t1_w, tie_p, t2_w = calculate_advanced_matchup(team_a, team_b, ref_profile, t1_inj, t2_inj)
+        
+        st.write("---")
+        st.subheader("📊 Feature-Weighted Outcome Breakdown")
+        st.write(f"**{team_a}** Win Chance: `{t1_w:.1f}%` *(Squad Value: {value_lookup[team_a]}M€)*")
+        st.progress(int(t1_w))
+        st.write(f"**Draw / Tie** Chance: `{tie_p:.1f}%`")
+        st.progress(int(tie_p))
+        st.write(f"**{team_b}** Win Chance: `{t2_w:.1f}%` *(Squad Value: {value_lookup[team_b]}M€)*")
+        st.progress(int(t2_w))
+
+with tab2:
+    st.header("🏆 High-Accuracy Simulation Engine")
+    st.write("Runs 1,000 algorithmic tournament iterations taking all tactical variations into account.")
+    
+    if st.button("🚀 Process Advanced Bracket Simulations", type="primary"):
+        with st.spinner("Calculating matrices..."):
+            trophy_tracker = {team: 0 for team in teams_df['team_name']}
+            
+            for run in range(1000):
+                group_winners, group_runners_up, third_place_pool = [], [], []
+                
+                for g_name in groups.keys():
+                    standings = {team: 0 for team in groups[g_name]}
+                    for i in range(len(groups[g_name])):
+                        for j in range(i + 1, len(groups[g_name])):
+                            t_x, t_y = groups[g_name][i], groups[g_name][j]
+                            w, t, l = calculate_advanced_matchup(t_x, t_y, "Standard / Balanced", 0, 0)
+                            roll = np.random.rand() * 100
+                            if roll < w: standings[t_x] += 3
+                            elif roll > (100 - l): standings[t_y] += 3
+                            else:
+                                standings[t_x] += 1
+                                standings[t_y] += 1
+                    sorted_s = sorted(standings.items(), key=lambda x: x[1], reverse=True)
+                    group_winners.append(sorted_s[0][0])
+                    group_runners_up.append(sorted_s[1][0])
+                    third_place_pool.append({'team': sorted_s[2][0], 'Points': sorted_s[2][1]})
+                
+                third_df = pd.DataFrame(third_place_pool).sort_values(by='Points', ascending=False)
+                best_8_third = third_df['team'].head(8).tolist()
+                
+                bracket = group_winners + group_runners_up + best_8_third
+                
+                while len(bracket) > 1:
+                    next_layer = []
+                    for i in range(0, len(bracket), 2):
+                        team_1 = bracket[i]
+                        team_2 = bracket[i+1]
+                        w, t, l = calculate_advanced_matchup(team_1, team_2, "Standard / Balanced", 0, 0)
+                        next_layer.append(team_1 if np.random.rand() * 100 < (w + t/2) else team_2)
+                    bracket = next_layer
+                    
+                trophy_tracker[bracket[0]] += 1
+
+            results_df = pd.DataFrame(list(trophy_tracker.items()), columns=['Country', 'Titles'])
+            results_df['Win Prob (%)'] = (results_df['Titles'] / 1000) * 100
+            st.success("High-accuracy calculations complete!")
+            st.table(results_df.sort_values(by='Win Prob (%)', ascending=False).reset_index(drop=True).head(15))
