@@ -184,4 +184,20 @@ with tab2:
                             else:
                                 standings[t_a] += 1
                                 standings[t_b] += 1
-                    sorted_s = sorted(standings.items(), key=
+                    sorted_s = sorted(standings.items(), key=lambda x: x[1], reverse=True)
+                    group_winners.append(sorted_s[0][0])
+                    group_runners_up.append(sorted_s[1][0])
+                
+                bracket = group_winners + group_runners_up
+                while len(bracket) > 1:
+                    next_layer = []
+                    for i in range(0, len(bracket), 2):
+                        w, t, l = calculate_advanced_matchup(bracket[i], bracket[i+1], "Standard / Balanced", 0, 0)
+                        next_layer.append(bracket[i] if np.random.rand() * 100 < (w + t/2) else bracket[i+1])
+                    bracket = next_layer
+                trophy_tracker[bracket[0]] += 1
+
+            results_df = pd.DataFrame(list(trophy_tracker.items()), columns=['Country', 'Titles'])
+            results_df['Win Prob (%)'] = (results_df['Titles'] / 1000) * 100
+            st.success("High-accuracy calculations complete!")
+            st.dataframe(results_df.sort_values(by='Win Prob (%)', ascending=False).reset_index(drop=True).head(15), use_container_width=True)
