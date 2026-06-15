@@ -1,0 +1,49 @@
+team_name,elo_rating,fifa_ranking,tactical_style,group_assignment
+Mexico,1750,15,balanced,Group A
+South Africa,1610,61,defensive_counter,Group A
+South Korea,1790,22,high_press,Group A
+Czechia,1730,36,attacking,Group A
+Canada,1710,27,high_press,Group B
+Bosnia and Herzegovina,1680,55,balanced,Group B
+Qatar,1590,51,possession,Group B
+Switzerland,1790,17,balanced,Group B
+Brazil,2010,5,possession,Group C
+Morocco,1840,11,defensive_counter,Group C
+Haiti,1480,84,attacking,Group C
+Scotland,1720,36,midfield_control,Group C
+USA,1780,14,high_press,Group D
+Paraguay,1690,39,defensive_counter,Group D
+Australia,1740,26,balanced,Group D
+Türkiye,1760,32,attacking,Group D
+Argentina,2140,1,possession,Group E
+Ecuador,1810,30,high_press,Group E
+Sweden,1770,25,balanced,Group E
+Uzbekistan,1640,58,defensive_counter,Group E
+France,2090,2,balanced,Group F
+Austria,1800,23,high_press,Group F
+Jamaica,1550,54,attacking,Group F
+Tunisia,1660,41,defensive_counter,Group F
+Spain,2040,3,possession,Group G
+Ukraine,1760,24,balanced,Group G
+Mali,1680,44,attacking,Group G
+New Zealand,1490,81,defensive_counter,Group G
+Portugal,1930,7,balanced,Group H
+Colombia,1880,12,high_press,Group H
+Panama,1620,43,balanced,Group H
+Angola,1580,70,defensive_counter,Group H
+Germany,1920,9,attacking,Group I
+Denmark,1820,21,midfield_control,Group I
+Costa Rica,1590,49,defensive_counter,Group I
+Oman,1570,76,balanced,Group I
+Belgium,1820,11,attacking,Group J
+Uruguay,1890,13,high_press,Group J
+Algeria,1710,46,balanced,Group J
+Honduras,1520,79,defensive_counter,Group J
+England,1980,4,balanced,Group K
+Iran,1740,20,defensive_counter,Group K
+Peru,1695,32,balanced,Group K
+Cameroon,1650,53,attacking,Group K
+Netherlands,1910,8,balanced,Group L
+Japan,1830,18,high_press,Group L
+Chile,1720,42,defensive_counter,Group L
+Egypt,1735,35,balanced,Group L
