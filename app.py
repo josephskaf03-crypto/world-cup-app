@@ -5,7 +5,9 @@ import io
 
 st.set_page_config(page_title="2026 World Cup Predictor", page_icon="🏆", layout="wide")
 
-# --- 1. REAL-WORLD MATCH LEDGER ---
+# --- 1. REAL-WORLD MATCH LEDGER (AI Learning Loop) ---
+# When real tournament matches finish, add them right here.
+# The AI digests these scores to dynamically re-calibrate team strengths!
 REAL_WORLD_RESULTS = [
     {"home_team": "Netherlands", "away_team": "Japan", "home_score": 2, "away_score": 2, "status": "FT"},
     {"home_team": "Germany", "away_team": "Curaçao", "home_score": 7, "away_score": 1, "status": "FT"}
@@ -44,7 +46,7 @@ New Zealand,1580,59,physical,Group G
 Spain,2025,980,possession,Group H
 Cabo Verde,1690,32,balanced,Group H
 Saudi Arabia,1655,63,possession,Group H
-Uruguay,1935,80,pressing,Group H
+Uruguay,1935,420,pressing,Group H
 France,2040,1110,attacking_fluid,Group I
 Senegal,1810,74,physical,Group I
 Norway,1790,72,wing_attack,Group I
@@ -68,7 +70,7 @@ def load_base_data():
 
 teams_df = load_base_data()
 elo_lookup = pd.Series(teams_df.elo_rating.values, index=teams_df.team_name).to_dict()
-value_lookup = pd.Series(teams_df.squad_value_m.values, index=teams_df.team_name).to_dict()  # FIXED HERE
+value_lookup = pd.Series(teams_df.squad_value_m.values, index=teams_df.team_name).to_dict()
 style_lookup = pd.Series(teams_df.play_style.values, index=teams_df.team_name).to_dict()
 
 # --- 3. DYNAMIC RE-RATING SYSTEM ---
@@ -86,7 +88,7 @@ for match in REAL_WORLD_RESULTS:
 
 groups = teams_df.groupby('group_assignment')['team_name'].apply(list).to_dict()
 
-# --- 4. ADVANCED MATH ENGINE ---
+# --- 4. MULTI-FEATURE MATCHUP ALGORITHM ---
 def calculate_advanced_matchup(t1, t2, ref_strictness, t1_injury_impact, t2_injury_impact):
     base_elo1 = elo_lookup.get(t1, 1500)
     base_elo2 = elo_lookup.get(t2, 1500)
@@ -154,13 +156,14 @@ with tab1:
 
 with tab2:
     st.header("🏆 High-Accuracy Simulation Engine")
-    st.write("Runs 1,000 algorithmic tournament iterations taking all tactical variations into account.")
+    st.write("Runs 10,000 algorithmic tournament iterations taking all tactical variations into account.")
     
     if st.button("🚀 Process Advanced Bracket Simulations", type="primary"):
-        with st.spinner("Calculating matrices..."):
+        with st.spinner("Calculating matrices across 10,000 iterations..."):
             trophy_tracker = {team: 0 for team in teams_df['team_name']}
             
-            for run in range(1000):
+            TOTAL_RUNS = 10000
+            for run in range(TOTAL_RUNS):
                 group_winners, group_runners_up, third_place_pool = [], [], []
                 
                 for g_name in groups.keys():
@@ -197,6 +200,6 @@ with tab2:
                 trophy_tracker[bracket[0]] += 1
 
             results_df = pd.DataFrame(list(trophy_tracker.items()), columns=['Country', 'Titles'])
-            results_df['Win Prob (%)'] = (results_df['Titles'] / 1000) * 100
+            results_df['Win Prob (%)'] = (results_df['Titles'] / TOTAL_RUNS) * 100
             st.success("High-accuracy calculations complete!")
             st.table(results_df.sort_values(by='Win Prob (%)', ascending=False).reset_index(drop=True).head(15))
